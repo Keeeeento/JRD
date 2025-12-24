@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パターンロック解除</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #e5e7eb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            min-height: 25px;
+        }
+
+        .status.success {
+            color: #374151;
+        }
+
+        .status.error {
+            color: #6b7280;
+        }
+
+        .status.info {
+            color: #4b5563;
+        }
+
+        .pattern-container {
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            aspect-ratio: 1;
+            background: #f9fafb;
+            border-radius: 15px;
+            padding: 20px;
+            transition: transform 0.1s;
+        }
+
+        .pattern-grid {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .dot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #d1d5db;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dot::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: transparent;
+            transition: all 0.2s;
+        }
+
+        .dot.active {
+            border-color: #1f2937;
+            background: #f3f4f6;
+        }
+
+        .dot.active::before {
+            background: #1f2937;
+        }
+
+        .dot.visited {
+            border-color: #374151;
+            background: #f9fafb;
+        }
+
+        .dot.visited::before {
+            background: #374151;
+        }
+
+        .dot.error {
+            border-color: #6b7280;
+            background: #f3f4f6;
+        }
+
+        .dot.error::before {
+            background: #6b7280;
+        }
+
+        .pattern-container.error-shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+            20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+
+        /* 9つの点の配置 */
+        .dot:nth-child(1) { top: 0; left: 0; }
+        .dot:nth-child(2) { top: 0; left: 50%; transform: translateX(-50%); }
+        .dot:nth-child(3) { top: 0; right: 0; }
+        .dot:nth-child(4) { top: 50%; left: 0; transform: translateY(-50%); }
+        .dot:nth-child(5) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .dot:nth-child(6) { top: 50%; right: 0; transform: translateY(-50%); }
+        .dot:nth-child(7) { bottom: 0; left: 0; }
+        .dot:nth-child(8) { bottom: 0; left: 50%; transform: translateX(-50%); }
+        .dot:nth-child(9) { bottom: 0; right: 0; }
+
+        .line {
+            position: absolute;
+            height: 4px;
+            background: #1f2937;
+            transform-origin: left center;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+        }
+
+        .btn-set {
+            background: #1f2937;
+            color: white;
+        }
+
+        .btn-set:hover {
+            background: #111827;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
+        }
+
+        .btn-clear {
+            background: #9ca3af;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #6b7280;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 163, 175, 0.3);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 パターンロック解除</h1>
+        <div class="status info" id="status">まずパターンを描いて「パターン設定」を押してください</div>
+        
+        <div class="pattern-container">
+            <div class="pattern-grid" id="patternGrid">
+                <div class="dot" data-index="0"></div>
+                <div class="dot" data-index="1"></div>
+                <div class="dot" data-index="2"></div>
+                <div class="dot" data-index="3"></div>
+                <div class="dot" data-index="4"></div>
+                <div class="dot" data-index="5"></div>
+                <div class="dot" data-index="6"></div>
+                <div class="dot" data-index="7"></div>
+                <div class="dot" data-index="8"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-set" onclick="setPattern()">パターン設定</button>
+            <button class="btn-reset" onclick="resetPattern()">リセット</button>
+            <button class="btn-clear" onclick="clearPattern()">クリア</button>
+        </div>
+
+        <div class="instructions">
+            <h3>使い方</h3>
+            <p>1. まず9つの点を線で結んでパターンを描きます（最低3点）</p>
+            <p>2. 「パターン設定」ボタンを押してパターンを保存します</p>
+            <p>3. 保存したパターンを再現すると解除成功です</p>
+            <p>4. 中間点は自動的に選択されます（例：左上→右上は中央上も自動選択）</p>
+        </div>
+    </div>
+
+    <script>
+        const patternGrid = document.getElementById('patternGrid');
+        const status = document.getElementById('status');
+        const dots = document.querySelectorAll('.dot');
+        
+        let currentPattern = [];
+        let savedPattern = null;
+        let isDrawing = false;
+        let lastDot = null;
+        let lines = [];
+
+        // 点の座標を取得
+        function getDotPosition(index) {
+            const dot = dots[index];
+            const rect = patternGrid.getBoundingClientRect();
+            const dotRect = dot.getBoundingClientRect();
+            return {
+                x: dotRect.left + dotRect.width / 2 - rect.left,
+                y: dotRect.top + dotRect.height / 2 - rect.top
+            };
+        }
+
+        // 2点間の距離を計算
+        function getDistance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        }
+
+        // 点のインデックスを取得（マウス位置から）
+        function getDotIndexFromPosition(x, y) {
+            const rect = patternGrid.getBoundingClientRect();
+            const localX = x - rect.left;
+            const localY = y - rect.top;
+
+            let closestIndex = -1;
+            let closestDistance = 60; // 判定範囲を広げる
+
+            for (let i = 0; i < dots.length; i++) {
+                const pos = getDotPosition(i);
+                const distance = getDistance(localX, localY, pos.x, pos.y);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestIndex = i;
+                }
+            }
+            return closestIndex;
+        }
+
+        // 中間点を自動的に検出して追加
+        function checkIntermediateDot(fromIndex, toIndex) {
+            if (fromIndex === -1 || toIndex === -1) return -1;
+            
+            const fromRow = Math.floor(fromIndex / 3);
+            const fromCol = fromIndex % 3;
+            const toRow = Math.floor(toIndex / 3);
+            const toCol = toIndex % 3;
+            
+            // 同じ行または同じ列の場合、中間点を検出
+            if (fromRow === toRow && Math.abs(fromCol - toCol) === 2) {
+                // 横方向：中間点を返す
+                return fromRow * 3 + 1;
+            } else if (fromCol === toCol && Math.abs(fromRow - toRow) === 2) {
+                // 縦方向：中間点を返す
+                return 3 + fromCol;
+            } else if (Math.abs(fromRow - toRow) === 2 && Math.abs(fromCol - toCol) === 2) {
+                // 斜め方向：中央点を返す
+                return 4;
+            }
+            
+            return -1;
+        }
+
+        // 線を描画
+        function drawLine(fromIndex, toIndex) {
+            const from = getDotPosition(fromIndex);
+            const to = getDotPosition(toIndex);
+            
+            const length = getDistance(from.x, from.y, to.x, to.y);
+            const angle = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
+            
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.width = length + 'px';
+            line.style.left = from.x + 'px';
+            line.style.top = from.y + 'px';
+            line.style.transform = `rotate(${angle}deg)`;
+            
+            patternGrid.appendChild(line);
+            lines.push(line);
+        }
+
+        // 点をアクティブにする
+        function activateDot(index) {
+            if (index === -1) return;
+            if (currentPattern.includes(index)) return;
+            
+            // 中間点をチェック
+            if (lastDot !== null && lastDot !== index) {
+                const intermediate = checkIntermediateDot(lastDot, index);
+                if (intermediate !== -1 && !currentPattern.includes(intermediate)) {
+                    // 中間点を先に追加
+                    activateDotDirect(intermediate);
+                }
+            }
+            
+            activateDotDirect(index);
+        }
+
+        // 点を直接アクティブにする（内部関数）
+        function activateDotDirect(index) {
+            if (currentPattern.includes(index)) return;
+            
+            const dot = dots[index];
+            dot.classList.add('active');
+            
+            if (lastDot !== null && lastDot !== index) {
+                drawLine(lastDot, index);
+            }
+            
+            currentPattern.push(index);
+            lastDot = index;
+            
+            // 少し遅れてvisitedに変更
+            setTimeout(() => {
+                dot.classList.remove('active');
+                dot.classList.add('visited');
+            }, 200);
+        }
+
+        // パターンをクリア
+        function clearPattern() {
+            currentPattern = [];
+            lastDot = null;
+            isDrawing = false;
+            
+            dots.forEach(dot => {
+                dot.classList.remove('active', 'visited', 'error');
+            });
+            
+            lines.forEach(line => line.remove());
+            lines = [];
+            
+            status.textContent = savedPattern ? 'パターンを描いてください' : 'まずパターンを描いて「パターン設定」を押してください';
+            status.className = 'status info';
+        }
+
+        // パターンを設定
+        function setPattern() {
+            if (currentPattern.length < 3) {
+                status.textContent = '最低3つの点を結んでください';
+                status.className = 'status error';
+                return;
+            }
+            
+            savedPattern = [...currentPattern];
+            status.textContent = 'パターンが設定されました！解除を試してください';
+            status.className = 'status success';
+            clearPattern();
+        }
+
+        // パターンをリセット
+        function resetPattern() {
+            savedPattern = null;
+            clearPattern();
+            status.textContent = 'パターンを設定してください';
+            status.className = 'status info';
+        }
+
+        // パターンを検証
+        function validatePattern() {
+            if (!savedPattern) {
+                status.textContent = 'まずパターンを設定してください';
+                status.className = 'status error';
+                return false;
+            }
+            
+            if (currentPattern.length !== savedPattern.length) {
+                return false;
+            }
+            
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (currentPattern[i] !== savedPattern[i]) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // マウスイベント
+        patternGrid.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const index = getDotIndexFromPosition(e.clientX, e.clientY);
+            if (index !== -1) {
+                activateDot(index);
+                if (!savedPattern) {
+                    status.textContent = `パターンを描いています... (${currentPattern.length}点)`;
+                    status.className = 'status info';
+                }
+            }
+        });
+
+        patternGrid.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            
+            const index = getDotIndexFromPosition(e.clientX, e.clientY);
+            if (index !== -1 && index !== lastDot) {
+                activateDot(index);
+                if (!savedPattern) {
+                    status.textContent = `パターンを描いています... (${currentPattern.length}点)`;
+                    status.className = 'status info';
+                }
+            }
+        });
+
+        patternGrid.addEventListener('mouseup', () => {
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            
+            if (!savedPattern) {
+                // パターン設定モード
+                if (currentPattern.length < 3) {
+                    status.textContent = '最低3つの点を結んでください';
+                    status.className = 'status error';
+                    setTimeout(() => {
+                        clearPattern();
+                        status.textContent = 'パターンを描いてください';
+                        status.className = 'status info';
+                    }, 2000);
+                } else {
+                    status.textContent = `${currentPattern.length}点のパターンが描かれました。「パターン設定」ボタンを押して保存してください`;
+                    status.className = 'status info';
+                }
+            } else {
+                // 解除モード
+                if (currentPattern.length < 3) {
+                    status.textContent = '最低3つの点を結んでください';
+                    status.className = 'status error';
+                    clearPattern();
+                    return;
+                }
+                
+                if (validatePattern()) {
+                    status.textContent = '✅ 解除成功！';
+                    status.className = 'status success';
+                    setTimeout(() => {
+                        clearPattern();
+                        status.textContent = 'パターンを描いてください';
+                        status.className = 'status info';
+                    }, 2000);
+                } else {
+                    status.textContent = '❌ パターンが一致しません';
+                    status.className = 'status error';
+                    const patternContainer = document.querySelector('.pattern-container');
+                    patternContainer.classList.add('error-shake');
+                    dots.forEach((dot, index) => {
+                        if (currentPattern.includes(index)) {
+                            dot.classList.add('error');
+                        }
+                    });
+                    setTimeout(() => {
+                        patternContainer.classList.remove('error-shake');
+                        clearPattern();
+                    }, 500);
+                }
+            }
+        });
+
+        // タッチイベント（モバイル対応）
+        patternGrid.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            const touch = e.touches[0];
+            const index = getDotIndexFromPosition(touch.clientX, touch.clientY);
+            if (index !== -1) {
+                activateDot(index);
+                if (!savedPattern) {
+                    status.textContent = `パターンを描いています... (${currentPattern.length}点)`;
+                    status.className = 'status info';
+                }
+            }
+        });
+
+        patternGrid.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+            
+            const touch = e.touches[0];
+            const index = getDotIndexFromPosition(touch.clientX, touch.clientY);
+            if (index !== -1 && index !== lastDot) {
+                activateDot(index);
+                if (!savedPattern) {
+                    status.textContent = `パターンを描いています... (${currentPattern.length}点)`;
+                    status.className = 'status info';
+                }
+            }
+        });
+
+        patternGrid.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            
+            if (!savedPattern) {
+                // パターン設定モード
+                if (currentPattern.length < 3) {
+                    status.textContent = '最低3つの点を結んでください';
+                    status.className = 'status error';
+                    setTimeout(() => {
+                        clearPattern();
+                        status.textContent = 'パターンを描いてください';
+                        status.className = 'status info';
+                    }, 2000);
+                } else {
+                    status.textContent = `${currentPattern.length}点のパターンが描かれました。「パターン設定」ボタンを押して保存してください`;
+                    status.className = 'status info';
+                }
+            } else {
+                // 解除モード
+                if (currentPattern.length < 3) {
+                    status.textContent = '最低3つの点を結んでください';
+                    status.className = 'status error';
+                    clearPattern();
+                    return;
+                }
+                
+                if (validatePattern()) {
+                    status.textContent = '✅ 解除成功！';
+                    status.className = 'status success';
+                    setTimeout(() => {
+                        clearPattern();
+                        status.textContent = 'パターンを描いてください';
+                        status.className = 'status info';
+                    }, 2000);
+                } else {
+                    status.textContent = '❌ パターンが一致しません';
+                    status.className = 'status error';
+                    const patternContainer = document.querySelector('.pattern-container');
+                    patternContainer.classList.add('error-shake');
+                    dots.forEach((dot, index) => {
+                        if (currentPattern.includes(index)) {
+                            dot.classList.add('error');
+                        }
+                    });
+                    setTimeout(() => {
+                        patternContainer.classList.remove('error-shake');
+                        clearPattern();
+                    }, 500);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
